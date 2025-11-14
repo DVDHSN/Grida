@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Grida - AI Spreadsheet</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" defer></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@500;600;700&display=swap" rel="stylesheet">
+<script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.29.0",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/"
+  }
+}
+</script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      color: #E0E0E0;
+      overflow: hidden; /* Prevent body scroll with new app layout */
+    }
+    .font-lora {
+      font-family: 'Lora', serif;
+    }
+
+    /* --- General Animations & Transitions --- */
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes scaleIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    @keyframes slideInUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+    .animate-scale-in { animation: scaleIn 0.3s ease-out forwards; }
+    .animate-slide-in-up { animation: slideInUp 0.35s ease-out forwards; }
+    
+    /* --- Base element transitions for smooth interactions --- */
+    button, a, input, select, textarea {
+      transition: all 0.2s ease-in-out;
+    }
+    
+    button {
+      transform-origin: center;
+    }
+    
+    button:not(:disabled):active {
+        transform: scale(0.97);
+    }
+
+    /* --- Scrollbar Styling --- */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #1e1e1e;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #444;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #555;
+    }
+
+    /* --- Redesign Specific Styles --- */
+    .sidebar-tooltip {
+        visibility: hidden;
+        opacity: 0;
+        transition: opacity 0.2s, visibility 0.2s;
+        z-index: 100;
+    }
+    .group:hover .sidebar-tooltip {
+        visibility: visible;
+        opacity: 1;
+    }
+    .sidebar-icon-active {
+        background-color: #800020;
+        color: white;
+    }
+    .sidebar-icon-active::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 3px;
+        height: 60%;
+        background-color: #EBCFD2;
+        border-radius: 0 3px 3px 0;
+    }
+
+    /* --- UI Component Styles --- */
+    .toolbar-btn {
+        background-color: transparent;
+        color: #E0E0E0;
+        font-weight: 500;
+        font-size: 0.875rem;
+        padding: 6px 12px;
+        border-radius: 6px;
+        transition: all 0.2s ease;
+        border: 1px solid transparent;
+    }
+    .toolbar-btn:hover:not(:disabled) {
+        background-color: #2a2a2a;
+        border-color: #444;
+    }
+    .toolbar-btn:disabled {
+        color: #777;
+        cursor: not-allowed;
+    }
+
+    .modal-input {
+        background-color: #2A2A2A;
+        border: 1px solid #444;
+        color: #E0E0E0;
+        padding: 8px 12px;
+        border-radius: 6px;
+        width: 100%;
+        transition: all 0.2s ease;
+    }
+    .modal-input:focus, .modal-input:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 2px #121212, 0 0 0 4px #800020;
+        border-color: #800020;
+    }
+
+    .action-btn {
+        background-color: #800020;
+        color: white;
+        font-weight: 500;
+        padding: 8px 16px;
+        border-radius: 6px;
+        transition: background-color 0.2s ease;
+    }
+    .action-btn:hover:not(:disabled) {
+        background-color: #990026;
+    }
+    .action-btn:disabled {
+        background-color: #333;
+        color: #777;
+        cursor: not-allowed;
+    }
+
+    .secondary-btn {
+        background-color: transparent;
+        color: #E0E0E0;
+        font-weight: 500;
+        padding: 7px 15px; /* 1px less padding to account for border */
+        border-radius: 6px;
+        transition: all 0.2s ease;
+        border: 1px solid #800020;
+    }
+    .secondary-btn:hover:not(:disabled) {
+        background-color: #800020;
+        color: white;
+    }
+
+    .cancel-btn {
+        background-color: #3A3A3A;
+        color: #E0E0E0;
+        font-weight: 500;
+        padding: 8px 16px;
+        border-radius: 6px;
+        transition: background-color 0.2s ease;
+        border: 1px solid #444;
+    }
+    .cancel-btn:hover {
+        background-color: #4A4A4A;
+        border-color: #555;
+    }
+
+    .destructive-btn {
+        border: 1px solid #800020;
+        color: #EBCFD2;
+        font-weight: 500;
+        padding: 7px 15px;
+        border-radius: 6px;
+        transition: all 0.2s ease;
+    }
+    .destructive-btn:hover:not(:disabled) {
+        background-color: #800020;
+        color: white;
+    }
+
+  </style>
+</head>
+<body class="bg-[#121212] antialiased">
+  <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>

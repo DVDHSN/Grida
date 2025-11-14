@@ -1,0 +1,7 @@
+{
+  "name": "Grida",
+  "description": "An AI-driven spreadsheet app that automatically organizes user-entered data and generates visualizations (charts, graphs) without manual setup. Paste your data, and let the AI do the rest.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
